@@ -37,10 +37,9 @@ export default function ItemDetails() {
     fetchItem();
   }, [itemId]);
 
-  // THE UPGRADED FUNCTION: Pinging the AI Brain
+  // ACTION 1: BUY THE ITEM
   const handleBuyNow = async () => {
     setIsProcessing(true);
-    
     try {
       // Send the item data to our Next.js backend AI Agent
       const response = await fetch('/api/logistics', {
@@ -49,20 +48,18 @@ export default function ItemDetails() {
         body: JSON.stringify({ 
           itemId: itemId, 
           method: method,
-          title: item.title // We pass the title so the AI knows what to research!
+          title: item.title 
         })
       });
 
       const result = await response.json();
 
       if (result.success) {
-        // If shipping, show the buyer what the AI calculated!
         if (method === 'shipping') {
           console.log("🤖 AI Logistics Report:", result.aiData);
           alert(`AI Shipping Estimate: $${result.aiData.estimatedCost}\n\n${result.aiData.aiMessage}`);
         }
         
-        // Mark as sold in the UI and show success screen
         await supabase.from('inventory').update({ is_sold: true }).eq('id', itemId);
         setTimeout(() => {
           setIsProcessing(false);
@@ -76,6 +73,26 @@ export default function ItemDetails() {
       alert("Failed to connect to AI Logistics.");
       setIsProcessing(false);
     }
+  };
+
+  // ACTION 2: CANCEL THE ORDER (BUYER)
+  const handleCancelOrder = async () => {
+    setIsProcessing(true);
+    // Flip the switches back to available
+    await supabase.from('inventory').update({ is_sold: false, logistics_status: 'pending' }).eq('id', itemId);
+    
+    setIsProcessing(false);
+    setPurchaseComplete(false); // Resets the UI instantly
+  };
+
+  // ACTION 3: COMPLETE THE TRANSACTION (SELLER)
+  const handleCompleteTransaction = async () => {
+    setIsProcessing(true);
+    // Mark as fully completed so the "Ghost Filter" hides it from the homepage
+    await supabase.from('inventory').update({ logistics_status: 'completed' }).eq('id', itemId);
+    
+    alert("Transaction Finalized! Removing from grid.");
+    router.push('/'); // Kick them back to the homepage
   };
 
   if (!item) {
@@ -97,15 +114,13 @@ export default function ItemDetails() {
 
       <div className="max-w-5xl mx-auto p-4 md:p-8 flex flex-col md:flex-row gap-8 mt-4">
         
-        {/* Left: Huge Image (Line broken to prevent truncation!) */}
-        <div 
-          className="w-full md:w-1/2 bg-slate-200 rounded-3xl overflow-hidden shadow-lg h-[400px] md:h-[600px] relative"
-        >
+        {/* Left: Huge Image */}
+        <div className="w-full md:w-1/2 bg-slate-200 rounded-3xl overflow-hidden shadow-lg h-[400px] md:h-[600px] relative">
           <img src={item.image_url} alt={item.title} className="w-full h-full object-cover" />
           {purchaseComplete && (
             <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center">
-              <span className="bg-rose-500 text-white font-black text-3xl px-8 py-4 rounded-2xl rotate-[-12deg] shadow-2xl">
-                SECURED
+              <span className="bg-amber-500 text-white font-black text-3xl px-8 py-4 rounded-2xl rotate-[-12deg] shadow-2xl tracking-widest border-2 border-white/20">
+                PENDING
               </span>
             </div>
           )}
@@ -124,10 +139,7 @@ export default function ItemDetails() {
                 <h3 className="font-black text-slate-900 text-lg mb-4">How do you want to get this?</h3>
                 
                 <div className="space-y-3">
-                  {/* Pickup */}
-                  <label 
-                    className={`flex items-center p-4 rounded-2xl border-2 cursor-pointer transition-all ${method === 'pickup' ? 'border-rose-500 bg-rose-50' : 'border-slate-100 hover:border-slate-200'}`}
-                  >
+                  <label className={`flex items-center p-4 rounded-2xl border-2 cursor-pointer transition-all ${method === 'pickup' ? 'border-rose-500 bg-rose-50' : 'border-slate-100 hover:border-slate-200'}`}>
                     <input type="radio" name="method" value="pickup" checked={method === 'pickup'} onChange={() => setMethod('pickup')} className="hidden" />
                     <div className="flex-1">
                       <div className="font-bold text-slate-900">Local Pickup</div>
@@ -136,10 +148,7 @@ export default function ItemDetails() {
                     {method === 'pickup' && <div className="w-4 h-4 bg-rose-500 rounded-full shadow-sm" />}
                   </label>
 
-                  {/* Delivery */}
-                  <label 
-                    className={`flex items-center p-4 rounded-2xl border-2 cursor-pointer transition-all ${method === 'delivery' ? 'border-rose-500 bg-rose-50' : 'border-slate-100 hover:border-slate-200'}`}
-                  >
+                  <label className={`flex items-center p-4 rounded-2xl border-2 cursor-pointer transition-all ${method === 'delivery' ? 'border-rose-500 bg-rose-50' : 'border-slate-100 hover:border-slate-200'}`}>
                     <input type="radio" name="method" value="delivery" checked={method === 'delivery'} onChange={() => setMethod('delivery')} className="hidden" />
                     <div className="flex-1">
                       <div className="font-bold text-slate-900">Local Delivery</div>
@@ -148,10 +157,7 @@ export default function ItemDetails() {
                     {method === 'delivery' && <div className="w-4 h-4 bg-rose-500 rounded-full shadow-sm" />}
                   </label>
 
-                  {/* Shipping */}
-                  <label 
-                    className={`flex items-center p-4 rounded-2xl border-2 cursor-pointer transition-all ${method === 'shipping' ? 'border-rose-500 bg-rose-50' : 'border-slate-100 hover:border-slate-200'}`}
-                  >
+                  <label className={`flex items-center p-4 rounded-2xl border-2 cursor-pointer transition-all ${method === 'shipping' ? 'border-rose-500 bg-rose-50' : 'border-slate-100 hover:border-slate-200'}`}>
                     <input type="radio" name="method" value="shipping" checked={method === 'shipping'} onChange={() => setMethod('shipping')} className="hidden" />
                     <div className="flex-1">
                       <div className="font-bold text-slate-900">Ship it to me</div>
@@ -172,27 +178,48 @@ export default function ItemDetails() {
             </div>
           ) : (
             
-            /* DYNAMIC SUCCESS UI BASED ON THEIR CHOICE */
-            <div className="bg-emerald-50 border-2 border-emerald-500 p-6 rounded-3xl shadow-lg relative overflow-hidden">
-              <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/10 rounded-full blur-2xl translate-x-1/2 -translate-y-1/2"></div>
-              <h3 className="font-black text-emerald-600 text-xl mb-2 flex items-center gap-2">
-                <svg className="w-6 h-6 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                AI Agent Activated
-              </h3>
-              
-              <div className="text-emerald-800 font-medium mb-4 space-y-2">
-                {method === 'pickup' && <p>Your purchase is secured! AI is currently messaging the seller to approve a pickup time. We will text you the address shortly.</p>}
-                {method === 'delivery' && <p>Your purchase is secured! AI is verifying the seller's local delivery schedule. You will receive a text with the delivery window soon.</p>}
-                {method === 'shipping' && <p>Your purchase is secured! AI is currently scanning the web for the dimensions of this item to generate the lowest possible shipping label. You will receive an invoice for the shipping cost shortly.</p>}
+            <div className="space-y-6">
+              {/* SUCCESS UI */}
+              <div className="bg-emerald-50 border-2 border-emerald-500 p-6 rounded-3xl shadow-lg relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/10 rounded-full blur-2xl translate-x-1/2 -translate-y-1/2"></div>
+                <h3 className="font-black text-emerald-600 text-xl mb-2 flex items-center gap-2">
+                  <svg className="w-6 h-6 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                  AI Agent Activated
+                </h3>
+                
+                <div className="text-emerald-800 font-medium mb-4 space-y-2">
+                  {method === 'pickup' && <p>Your purchase is secured! AI is currently messaging the seller to approve a pickup time. We will text you the address shortly.</p>}
+                  {method === 'delivery' && <p>Your purchase is secured! AI is verifying the seller's local delivery schedule. You will receive a text with the delivery window soon.</p>}
+                  {method === 'shipping' && <p>Your purchase is secured! AI is currently scanning the web for the dimensions of this item to generate the lowest possible shipping label.</p>}
+                </div>
+                
+                <div className="bg-white/60 p-3 rounded-xl border border-emerald-200 text-sm font-bold text-emerald-700 flex justify-between items-center">
+                  <span>Status:</span>
+                  <span className="animate-pulse bg-emerald-100 px-3 py-1 rounded-full">
+                    {method === 'pickup' ? 'Texting Seller...' : method === 'delivery' ? 'Coordinating Schedule...' : 'Calculating Specs...'}
+                  </span>
+                </div>
               </div>
-              
-              <div className="bg-white/60 p-3 rounded-xl border border-emerald-200 text-sm font-bold text-emerald-700 flex justify-between items-center">
-                <span>Status:</span>
-                <span className="animate-pulse bg-emerald-100 px-3 py-1 rounded-full">
-                  {method === 'pickup' ? 'Texting Seller...' : method === 'delivery' ? 'Coordinating Schedule...' : 'Calculating Specs...'}
-                </span>
+
+              {/* BUYER CANCEL BUTTON */}
+              <button 
+                onClick={handleCancelOrder}
+                disabled={isProcessing}
+                className="w-full bg-white text-rose-500 border-2 border-rose-100 hover:border-rose-500 hover:bg-rose-50 font-bold py-4 rounded-2xl transition-all"
+              >
+                {isProcessing ? "Cancelling..." : "I changed my mind (Cancel Request)"}
+              </button>
+
+              {/* SELLER COMPLETE BUTTON (For testing purposes) */}
+              <div className="border-t-2 border-slate-100 pt-6 mt-6">
+                <p className="text-xs text-slate-400 font-bold uppercase tracking-widest mb-3">Seller Controls (Testing)</p>
+                <button 
+                  onClick={handleCompleteTransaction}
+                  disabled={isProcessing}
+                  className="w-full bg-slate-900 hover:bg-black text-white font-bold py-4 rounded-2xl transition-all shadow-md"
+                >
+                  Finalize & Remove from Grid
+                </button>
               </div>
             </div>
           )}
