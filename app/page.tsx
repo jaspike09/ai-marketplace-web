@@ -3,10 +3,11 @@ import { useState, useRef, Suspense, useEffect } from "react";
 import { Canvas, useFrame } from "@react-three/fiber";
 import { OrbitControls, Environment, ContactShadows, useGLTF } from "@react-three/drei";
 import { createClient } from "@supabase/supabase-js";
+import Link from "next/link";
 
 // Initialize Supabase Database Connection
 const supabaseUrl = "https://vqufamwvuimjitoxwedu.supabase.co";
-const supabaseAnonKey = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZxdWZhbXd2dWltaml0b3h3ZWR1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE4MTI4MDQsImV4cCI6MjA4NzM4ODgwNH0.R4XNi1woiAfUgp03L6hPko6wkHtHdhefRme6TvD6VLw; // <--- PASTE YOUR KEY HERE
+const supabaseAnonKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZxdWZhbXd2dWltaml0b3h3ZWR1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE4MTI4MDQsImV4cCI6MjA4NzM4ODgwNH0.R4XNi1woiAfUgp03L6hPko6wkHtHdhefRme6TvD6VLw"; 
 const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 // The Photorealistic 3D Model
@@ -47,7 +48,7 @@ export default function MarketplaceHome() {
   }, []);
 
   return (
-    <main className="min-h-screen bg-slate-50 flex flex-col">
+    <main className="min-h-screen bg-slate-50 flex flex-col relative pb-32">
       
       {/* Top Navbar */}
       <nav className="bg-white px-4 py-4 sticky top-0 z-40 shadow-sm flex items-center justify-between">
@@ -119,6 +120,15 @@ export default function MarketplaceHome() {
           </div>
         </div>
       )}
+
+      {/* THE FLOATING "POST ITEM" BUTTON - WIRED UP AND READY */}
+      <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-50">
+        <Link href="/post" className="bg-rose-500 hover:bg-rose-600 text-white flex items-center gap-3 px-8 py-4 rounded-full shadow-[0_10px_30px_rgba(244,63,94,0.4)] transition-transform hover:scale-105 active:scale-95 cursor-pointer">
+          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"></path><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+          <span className="font-bold text-lg tracking-wide uppercase">Post Item</span>
+        </Link>
+      </div>
+
     </main>
   );
 }
