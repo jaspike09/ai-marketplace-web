@@ -28,11 +28,9 @@ function VirtualItem() {
 
 export default function MarketplaceHome() {
   const [viewMode, setViewMode] = useState<"2D" | "3D">("2D");
-  
-  // This state now starts empty, waiting for real database items
   const [items, setItems] = useState<any[]>([]);
 
-  // THE NERVOUS SYSTEM: Fetch live data when the page loads
+  // Fetch live data when the page loads
   useEffect(() => {
     async function fetchInventory() {
       const { data, error } = await supabase.from('inventory').select('*');
@@ -40,7 +38,9 @@ export default function MarketplaceHome() {
       if (error) {
         console.error("Error fetching inventory:", error);
       } else if (data) {
-        setItems(data); // Injects the live database rows into the grid!
+        // THE GHOST FILTER: Remove items that are completely finalized
+        const activeItems = data.filter(item => item.logistics_status !== 'completed');
+        setItems(activeItems); 
       }
     }
     
@@ -59,7 +59,6 @@ export default function MarketplaceHome() {
           <span className="font-black text-xl tracking-tight text-slate-900">marketplace</span>
         </div>
         
-        {/* THE VIEW TOGGLE */}
         <div className="flex bg-slate-100 p-1 rounded-full border border-slate-200 shadow-inner">
           <button 
             onClick={() => setViewMode("2D")}
@@ -76,7 +75,7 @@ export default function MarketplaceHome() {
         </div>
       </nav>
 
-      {/* CONDITIONAL RENDER: Show 2D Grid OR 3D Canvas */}
+      {/* 2D Grid OR 3D Canvas */}
       {viewMode === "2D" ? (
         <div className="p-4 max-w-7xl mx-auto w-full flex-grow">
           {items.length === 0 ? (
@@ -84,12 +83,26 @@ export default function MarketplaceHome() {
           ) : (
             <div className="columns-2 md:columns-3 lg:columns-4 gap-4 space-y-4">
               {items.map((item) => (
-                <Link href={`/item/${item.id}`} key={item.id} className="block relative group rounded-2xl overflow-hidden cursor-pointer break-inside-avoid shadow-sm hover:shadow-xl transition-all duration-300">
-                  <div className="w-full h-64 bg-slate-200">
+                <Link 
+                  href={`/item/${item.id}`} 
+                  key={item.id} 
+                  className="block relative group rounded-2xl overflow-hidden cursor-pointer break-inside-avoid shadow-sm hover:shadow-xl transition-all duration-300"
+                >
+                  <div className="w-full h-64 bg-slate-200 relative">
                     <img src={item.image_url} alt={item.title} className="w-full h-full object-cover" />
+                    
+                    {/* THE PENDING BADGE */}
+                    {item.is_sold && (
+                      <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center z-10">
+                        <span className="bg-amber-500 text-white font-black text-2xl px-6 py-2 rounded-2xl rotate-[-12deg] shadow-2xl tracking-widest border-2 border-white/20">
+                          PENDING
+                        </span>
+                      </div>
+                    )}
                   </div>
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-90"></div>
-                  <div className="absolute bottom-0 left-0 p-4 w-full">
+                  
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-90 pointer-events-none"></div>
+                  <div className="absolute bottom-0 left-0 p-4 w-full pointer-events-none z-20">
                     <div className="font-black text-2xl text-white mb-1 tracking-tight drop-shadow-md">{item.price}</div>
                     <div className="text-slate-200 text-sm font-medium line-clamp-1 drop-shadow-md">{item.title}</div>
                   </div>
@@ -121,27 +134,12 @@ export default function MarketplaceHome() {
         </div>
       )}
 
-      {/* THE FLOATING "POST ITEM" BUTTON - WIRED UP AND READY */}
+      {/* FLOATING POST BUTTON */}
       <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-50">
         <Link href="/post" className="bg-rose-500 hover:bg-rose-600 text-white flex items-center gap-3 px-8 py-4 rounded-full shadow-[0_10px_30px_rgba(244,63,94,0.4)] transition-transform hover:scale-105 active:scale-95 cursor-pointer">
-          <svg 
-            className="w-6 h-6" 
-            fill="none" 
-            stroke="currentColor" 
-            viewBox="0 0 24 24"
-          >
-            <path 
-              strokeLinecap="round" 
-              strokeLinejoin="round" 
-              strokeWidth="2.5" 
-              d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"
-            />
-            <path 
-              strokeLinecap="round" 
-              strokeLinejoin="round" 
-              strokeWidth="2.5" 
-              d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"
-            />
+          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
           </svg>
           <span className="font-bold text-lg tracking-wide uppercase">Post Item</span>
         </Link>
