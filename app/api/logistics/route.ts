@@ -1,11 +1,9 @@
 import { NextResponse } from 'next/server';
-import OpenAI from 'openai';
+import { GoogleGenerativeAI } from '@google/generative-ai';
 import { createClient } from '@supabase/supabase-js';
 
-// Initialize OpenAI (Using a secure environment variable!)
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+// Initialize Gemini securely using Vercel's environment variables
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
 
 // Initialize Supabase
 const supabaseUrl = "https://vqufamwvuimjitoxwedu.supabase.co";
@@ -16,43 +14,54 @@ export async function POST(req: Request) {
   try {
     const { itemId, method, title } = await req.json();
 
-    // IF SHIPPING: Trigger the AI to calculate weight, dimensions, and cost
+    // IF SHIPPING: Trigger Gemini to calculate specs and cost
     if (method === 'shipping') {
       const prompt = `
         You are an expert logistics AI for a peer-to-peer marketplace. 
-        A user just bought an item titled: "${title}".
-        Estimate the shipping weight (in lbs) and dimensions (L x W x H in inches) based on what this item typically is.
-        Calculate a rough shipping cost using this formula: $5 base rate + $0.50 per pound.
+        A user wants to ship an item titled: "${title}".
         
-        Return ONLY a JSON object in this exact format:
+        1. Estimate the shipping weight in pounds (lbs).
+        2. Determine if it can be shipped via standard mail (FedEx/UPS/USPS). 
+           RULE: Vehicles, live animals, and items over 150 lbs CANNOT be shipped standard mail.
+        3. If it CAN be shipped, calculate estimatedCost: $5 + ($0.50 * weight).
+        4. If it CANNOT be shipped, set estimatedCost to 0.
+
+        Return EXACTLY this JSON format and nothing else:
         {
-          "weight": "estimated weight in lbs",
-          "dimensions": "L x W x H",
-          "estimatedCost": "calculated cost as a number",
-          "aiMessage": "A short, friendly message explaining the estimated size and shipping cost to the buyer."
+          "weight": <number>,
+          "isShippable": <boolean>,
+          "estimatedCost": <number>,
+          "aiMessage": "<If shippable, explain the estimated size/cost. If NOT shippable, politely explain why it is too large/unshippable and suggest they cancel and choose Local Pickup or Delivery instead.>"
         }
       `;
 
-      // Call OpenAI
-      const response = await openai.chat.completions.create({
-        model: 'gpt-4o-mini', // Super fast, extremely cheap
-        messages: [{ role: 'user', content: prompt }],
-        response_format: { type: 'json_object' }
+      // Ping Gemini's ultra-fast Flash model and force it to output clean JSON
+      const model = genAI.getGenerativeModel({ 
+        model: "gemini-2.5-flash",
+        generationConfig: { responseMimeType: "application/json" }
       });
+      
+      const result = await model.generateContent(prompt);
+      const aiData = JSON.parse(result.response.text());
 
-      const aiData = JSON.parse(response.choices[0].message.content || '{}');
+      // THE OVERSIZED CHECK: Block cars, dogs, and heavy items!
+      if (!aiData.isShippable) {
+        return NextResponse.json({ 
+          success: false, 
+          error: aiData.aiMessage 
+        });
+      }
 
-      // Update the database with the AI's calculated status
+      // If it IS shippable, update the database
       await supabase
         .from('inventory')
         .update({ logistics_status: `AI Shipping Calc: $${aiData.estimatedCost}` })
         .eq('id', itemId);
 
-      // Send the AI data back to the frontend
       return NextResponse.json({ success: true, aiData });
     }
 
-    // If Pickup or Delivery: Just update the database normally
+    // IF PICKUP OR DELIVERY: Standard update without AI sizing
     await supabase
       .from('inventory')
       .update({ logistics_status: `pending_${method}` })
@@ -64,7 +73,7 @@ export async function POST(req: Request) {
     });
 
   } catch (error: any) {
-    console.error("AI Logistics Error:", error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    console.error("Gemini Logistics Error:", error);
+    return NextResponse.json({ success: false, error: "Failed to reach AI Logistics engine." }, { status: 500 });
   }
 }
