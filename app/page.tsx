@@ -84,7 +84,8 @@ export default function MarketplaceHome() {
           ) : (
             <div className="columns-2 md:columns-3 lg:columns-4 gap-4 space-y-4">
               {items.map((item) => (
-                <div key={item.id} className="relative group rounded-2xl overflow-hidden cursor-pointer break-inside-avoid shadow-sm hover:shadow-xl transition-all duration-300">
+                // This is the updated code: We wrapped the card in a <Link> so it acts as a button
+                <Link href={`/item/${item.id}`} key={item.id} className="block relative group rounded-2xl overflow-hidden cursor-pointer break-inside-avoid shadow-sm hover:shadow-xl transition-all duration-300">
                   <div className="w-full h-64 bg-slate-200">
                     <img src={item.image_url} alt={item.title} className="w-full h-full object-cover" />
                   </div>
@@ -93,7 +94,7 @@ export default function MarketplaceHome() {
                     <div className="font-black text-2xl text-white mb-1 tracking-tight drop-shadow-md">{item.price}</div>
                     <div className="text-slate-200 text-sm font-medium line-clamp-1 drop-shadow-md">{item.title}</div>
                   </div>
-                </div>
+                </Link>
               ))}
             </div>
           )}
@@ -124,11 +125,4 @@ export default function MarketplaceHome() {
       {/* THE FLOATING "POST ITEM" BUTTON - WIRED UP AND READY */}
       <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-50">
         <Link href="/post" className="bg-rose-500 hover:bg-rose-600 text-white flex items-center gap-3 px-8 py-4 rounded-full shadow-[0_10px_30px_rgba(244,63,94,0.4)] transition-transform hover:scale-105 active:scale-95 cursor-pointer">
-          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"></path><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
-          <span className="font-bold text-lg tracking-wide uppercase">Post Item</span>
-        </Link>
-      </div>
-
-    </main>
-  );
-}
+          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2
