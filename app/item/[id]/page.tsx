@@ -37,7 +37,6 @@ export default function ItemDetails() {
     fetchItem();
   }, [itemId]);
 
-  // Slower ticker: checks every 10 seconds to keep the minute accurate without burning processing power
   useEffect(() => {
     if (!purchaseComplete || !item?.pending_expires_at) return;
 
@@ -101,6 +100,15 @@ export default function ItemDetails() {
     await supabase.from('inventory').update({ is_sold: false, logistics_status: 'pending', pending_expires_at: null }).eq('id', itemId);
     setIsProcessing(false);
     setPurchaseComplete(false);
+  };
+
+  // NEW: SELLER CAN REVOKE THE HOLD ANYTIME
+  const handleRevokeHold = async () => {
+    setIsProcessing(true);
+    await supabase.from('inventory').update({ is_sold: false, logistics_status: 'pending', pending_expires_at: null }).eq('id', itemId);
+    setIsProcessing(false);
+    setPurchaseComplete(false);
+    alert("Hold revoked! The item is instantly back on the public market.");
   };
 
   const handleCompleteTransaction = async () => {
@@ -187,9 +195,14 @@ export default function ItemDetails() {
 
               <div className="border-t-2 border-slate-100 pt-6 mt-6">
                 <p className="text-xs text-slate-400 font-bold uppercase tracking-widest mb-3">Seller Controls (Testing)</p>
-                <button onClick={handleCompleteTransaction} disabled={isProcessing} className="w-full bg-slate-900 hover:bg-black text-white font-bold py-4 rounded-2xl transition-all shadow-md">
-                  Finalize & Remove from Grid
-                </button>
+                <div className="space-y-3">
+                  <button onClick={handleRevokeHold} disabled={isProcessing} className="w-full bg-white text-slate-900 border-2 border-slate-200 hover:border-slate-900 font-bold py-4 rounded-2xl transition-all">
+                    Revoke Hold (Return to Market)
+                  </button>
+                  <button onClick={handleCompleteTransaction} disabled={isProcessing} className="w-full bg-slate-900 hover:bg-black text-white font-bold py-4 rounded-2xl transition-all shadow-md">
+                    Finalize & Remove from Grid
+                  </button>
+                </div>
               </div>
             </div>
           )}
